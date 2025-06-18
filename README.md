@@ -1,4 +1,4 @@
-# Ticket Classification and Routing Assistant.
+# Ticket Classification and Routing Assistant
 
 This is a Ticket Classification and Routing Assistant. It assists in identifying and classifying bug reports found in email messages by using specific keywords and context to determine the relevant department (frontend, backend, sysops, or cross-functional). Analyzed emails will be routed to the relevant department based on the classification.
 
