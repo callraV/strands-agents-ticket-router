@@ -7,6 +7,7 @@ This is a Ticket Classification and Routing Assistant. It assists in identifying
 - **Gmail Integration**: Securely connects to your Gmail account to scan for bug report emails
 - **Bug Detection**: Identifies and extracts bug reports from incoming emails
 - **Department Classification**: Uses keywords and context to classify bugs as frontend, backend, sysops, or cross-functional
+- **Urgency Classification**: Use keywords and context to classify bugs as urgent or not urgent
 - **Automated Forwarding**: Forwards analyzed bug reports to the relevant department
 - **Contextual Analysis**: Considers email content and attachments for accurate classification
 
@@ -51,24 +52,25 @@ This is a Ticket Classification and Routing Assistant. It assists in identifying
 
 1. **Authentication**: Securely connects to your Gmail account using OAuth2
 2. **Email Scanning**: Searches for emails containing bug reports
-3. **Bug Classification**: Analyzes email content to classify the bug and determine the relevant department
+3. **Bug Classification**: Analyzes email content to classify the bug and determine its urgency and relevant department
 4. **Forwarding**: Forwards the bug report to the appropriate department
 
 ## Project Structure
 
 ```
 ticket-routing-agent/
+├── config/
+│   ├── credentials.json    # Gmail API credentials
+│   └── token.json          # Gmail API token: auto-generated after initial run
 ├── src/
 │   ├── __init__.py
 │   ├── agent.py            # Agent implementation
 │   ├── gmail_handler.py    # Gmail API integration and email handling
 │   └── ticket_analyzer.py  # Bug classification logic
-├── config/
-│   └── credentials.json    # Gmail API credentials
-│   └── token.json          # Gmail API token
 ├── requirements.txt        # Project dependencies
-├── setup.sh                # Installation script
 ├── run.py                  # CLI interface
+├── setup.sh                # Installation script
+├── LICENSE                 # MIT license
 └── README.md               # This file
 ```
 
@@ -82,4 +84,4 @@ This application:
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [MIT License](LICENSE)
