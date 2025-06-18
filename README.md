@@ -41,6 +41,7 @@ This is a Ticket Classification and Routing Assistant. It assists in identifying
    - Create OAuth 2.0 credentials (Desktop application)
    - Download the credentials.json file
    - Place it in the `config/` directory
+   - Rename to credentials.json
 
 5. Run the agent with:
 
