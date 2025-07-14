@@ -1,14 +1,14 @@
 import logging
-from datetime import datetime
 from typing import List, Dict, Any
 
-from strands import Agent
-from strands.models import BedrockModel
+from strands import Agent, tool # strands agent framework
+from strands.models import BedrockModel # LLM model
+from strands_tools import current_time, calculator # tools
 
 from .gmail_handler import GmailHandler
 from .ticket_analyzer import TicketAnalyzer
 
-# Configure logging
+# configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -21,7 +21,7 @@ class TicketRoutingAgent:
     A Strands agent for scanning Gmail, classifying bug-related tickets, and forwarding them to the relevant department.
     """
 
-    def __init__(self, region: str = 'us-east-1', profile_name: str = 'default'):
+    def __init__(self, region: str = 'ap-southeast-1', profile_name: str = 'default'):
         self.region = region
         self.profile_name = profile_name
         self.gmail_handler = GmailHandler()
@@ -31,6 +31,8 @@ class TicketRoutingAgent:
         self.summary = {}
 
     def _create_agent(self) -> Agent:
+
+        # --- define LLM model ---
         bedrock_model = BedrockModel(
             model_id="anthropic.claude-3-5-sonnet-20240620-v1:0",
             region_name=self.region,
@@ -38,25 +40,61 @@ class TicketRoutingAgent:
             temperature=0.2
         )
 
+        # --- define tools ---
+        # these are methods that can only be called through the agent.
+        # agent can call class methods by redefining the method as a @tool.
+        @tool
+        def get_all_inbox() -> List[Dict[str, Any]]:
+            """
+            Get all emails from the user's Gmail inbox.
+            """
+            return self.gmail_handler.get_all_inbox_emails()
+        
+        @tool
+        def get_tickets() -> List[Dict[str, Any]]:
+            """
+            Scan Gmail for bug-related tickets.
+            """
+            return self.scan_gmail()
+        
+        @tool
+        def forward_tickets(tickets: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+            """
+            Forward classified tickets to their respective departments.
+            """
+            return self.forward_tickets(tickets)
+    
+
+        # --- create agent ---
         agent = Agent(
             model=bedrock_model,
             tools=[
-                self.gmail_handler,
-                self.ticket_analyzer
+                current_time, # default strands tool
+                calculator, # default strands tool
+                get_all_inbox, # custom tool
+                get_tickets, # custom tool
+                forward_tickets, # custom tool
             ],
             system_prompt="""
             You are a Ticket Classification and Routing Assistant. Your role is to assist in
-            identifying and classifying bug reports found in email messages. Use specific
-            keywords and context to determine the relevant department (frontend, backend,
-            sysops, or cross-functional). Analyzed emails will be routed as tickets to the
-            relevant department based on the classification.
+            identifying and classifying bug reports found in email messages. You can:
 
-            Your output should be concise, well-structured, and informative for triage purposes.
+            1. Scan Gmail for bug-related tickets.
+            2. Analyze and classify tickets based on their content.
+            3. Summarize tickets and provide a report.
+            4. Forward tickets to the relevant department (frontend, backend, sysops, or cross-functional), if prompted by the user.
+
+            When first called, the first thing you should say is a greeting.
+            Always starts by greeting the user according to the current time of day in Kuala Lumpur.
+            Do not announce the first tool you call, just use it.
+            Then, ask what the user needs help with.
             """
         )
 
         return agent
 
+    # --- define class methods ---
+    # these methods can be called directly.
     def scan_gmail(self) -> List[Dict[str, Any]]:
         if not self.gmail_handler.authenticate():
             logger.error("Gmail authentication failed. Check credentials.")
@@ -64,7 +102,6 @@ class TicketRoutingAgent:
 
         logger.info(f"Scanning inbox for bug-related tickets...")
 
-        all_inbox_emails = self.gmail_handler.get_all_inbox_emails()
         tickets = self.gmail_handler.query_inbox_for_ticket()
 
         self.processed_tickets = []
@@ -72,53 +109,20 @@ class TicketRoutingAgent:
         for ticket in tickets:
             issue_summary = self.gmail_handler.extract_issue_summary(ticket)
             ticket['summary'] = issue_summary
-            
-            # # logs reasoning - optional
-            # analysis_result = self.agent(f"Analyze and classify this issue email: {email_content[:5000]}").message
-            # email['agent_analysis'] = analysis_result
-            # logger.info(f"Analysis result: {analysis_result}")
 
             self.processed_tickets.append(ticket)
 
         self.tickets = self.ticket_analyzer.summarize_tickets(self.processed_tickets)
         self.summary = self.ticket_analyzer.generate_ticket_report(self.tickets)
-        self.forwarded_tickets = self.gmail_handler.forward_classified_emails(self.tickets)
-        self.forwarded_tickets_report = "\n".join(self.forwarded_tickets)
 
-        logger.info(f"Found {len(all_inbox_emails)} emails in inbox")
-        logger.info(f"Out of which, {len(tickets)} potential bug tickets were identified")
+        return self.tickets
+    
+    
+    def forward_tickets(self, tickets: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+      
+        self.forwarded_tickets = self.gmail_handler.forward_classified_emails(tickets)
+        self.forwarded_tickets_report = "\n".join(self.forwarded_tickets)
 
         logger.info(f"Forwarded Tickets: \n{self.forwarded_tickets_report}") 
 
-        logger.info(f"Summary:{self.summary}")
-        # logger.info(f"Tickets: {self.tickets}") # for debugging
-
-        return self.tickets
-
-    def export_to_csv(self, filepath: str) -> bool:
-        if not self.tickets:
-            logger.warning("No ticket data to export")
-            return False
-
-        try:
-            import csv
-
-            with open(filepath, 'w', newline='') as csvfile:
-                fieldnames = [
-                    'subject', 'from', 'date', 'summary', 'department', 'timestamp'
-                ]
-                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-                writer.writeheader()
-
-                for ticket in self.tickets:
-                    row = {field: ticket.get(field, '') for field in fieldnames}
-                    if isinstance(row['date'], datetime):
-                        row['date'] = row['date'].strftime('%Y-%m-%d')
-                    writer.writerow(row)
-
-            logger.info(f"Exported ticket data to {filepath}")
-            return True
-
-        except Exception as e:
-            logger.error(f"Error exporting to CSV: {e}")
-            return False
+        return self.forwarded_tickets

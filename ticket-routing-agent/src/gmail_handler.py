@@ -18,7 +18,6 @@ SCOPES = [
     'https://www.googleapis.com/auth/gmail.compose',  # Compose and send forwarded emails
 ]
 
-
 class GmailHandler:
     """ 
     A class to handle Gmail API authentication, scan for bug tickets, and forward tickets to relevant departments.

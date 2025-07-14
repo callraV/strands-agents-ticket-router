@@ -4,11 +4,9 @@ import sys
 import argparse
 import colorama
 from colorama import Fore
-from tabulate import tabulate
 
 # Add the src directory to the path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "src")))
-
 from src.agent import TicketRoutingAgent
 
 colorama.init(autoreset=True)
@@ -40,60 +38,24 @@ def main():
     print_banner()
 
     print(f"{Fore.WHITE}Initializing Ticket Routing Agent...")
-    agent = TicketRoutingAgent(region=args.region, profile_name=args.profile)
+    agent = TicketRoutingAgent(region=args.region, profile_name=args.profile).agent
 
-    print(f"{Fore.WHITE}Authenticating with Gmail...")
-    if not agent.gmail_handler.authenticate():
-        print(f"{Fore.RED}Authentication failed. Check your OAuth setup.")
-        sys.exit(1)
-    
-    print(f"{Fore.CYAN}Scanning Gmail for bugs reported...")
-
-    try:
-        tickets = agent.scan_gmail()
-    except Exception as e:
-        print(f"{Fore.RED}Scan failed: {e}")
+    if not agent:
+        print(f"{Fore.RED}✗ Failed to initialize agent. Check your configuration.")
         sys.exit(1)
 
-    if not tickets:
-        print(f"{Fore.YELLOW}No bug-related emails found.")
-        return
+    print(f"{Fore.GREEN}✓ Agent initialized successfully. Starting session...")
 
-    print(f"{Fore.GREEN}✓ Scan complete. Found {len(tickets)} ticket(s).\n")
+    # Interactive prompt loop
+    while True:
+        user_input = input(f"\n{Fore.MAGENTA}Prompt (quit by entering q): ").strip().lower()
 
-    print(f"{Fore.CYAN}🛠 Ticket Classification Results:\n")
-
-    table_data = []
-    for ticket in tickets:
-        table_data.append([
-            ticket.get('subject', 'N/A')[:50],
-            ticket.get('category', 'Unknown'),
-            ticket.get('is_urgent', 'Unknown'),
-            ticket.get('timestamp', 'Unknown'),
-            ticket.get('from', 'Unknown'),
-            # ticket.get('forward_to', 'Unknown') # show forwarded department - optional
-
-        ])
-
-    print(tabulate(
-        table_data,
-        headers=[
-            "Subject",
-            "Bug Type",
-            "Urgent",
-            "Timestamp",
-            "Reported By",
-            # "Forward To" # show forwarded department - optional
-            ],
-        tablefmt="fancy_grid"
-    ))
-
-    if args.export:
-        export_path = args.export if args.export.endswith('.csv') else f"{args.export}.csv"
-        if agent.export_to_csv(export_path):
-            print(f"\n{Fore.GREEN}✓ Exported results to {export_path}")
+        if user_input.lower() in ['q', 'quit', 'exit']:
+            print(f"{Fore.GREEN}See you next time!")
+            break
         else:
-            print(f"\n{Fore.RED}✗ Failed to export results to CSV")
+            print(f"\n")
+            agent(f"{user_input}").message
 
 if __name__ == "__main__":
     main()
