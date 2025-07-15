@@ -31,6 +31,7 @@ class TicketRoutingAgent:
         self.summary = {}
 
     def _create_agent(self) -> Agent:
+        # --- define LLM model ---
         bedrock_model = BedrockModel(
             model_id="anthropic.claude-3-5-sonnet-20240620-v1:0",
             region_name=self.region,
@@ -38,12 +39,10 @@ class TicketRoutingAgent:
             temperature=0.2
         )
 
+        # --- create agent ---
         agent = Agent(
             model=bedrock_model,
-            tools=[
-                self.gmail_handler,
-                self.ticket_analyzer
-            ],
+            tools=[],
             system_prompt="""
             You are a Ticket Classification and Routing Assistant. Your role is to assist in
             identifying and classifying bug reports found in email messages. Use specific
@@ -56,7 +55,8 @@ class TicketRoutingAgent:
         )
 
         return agent
-
+    
+    # --- define class methods (tools) ---
     def scan_gmail(self) -> List[Dict[str, Any]]:
         if not self.gmail_handler.authenticate():
             logger.error("Gmail authentication failed. Check credentials.")
@@ -94,31 +94,3 @@ class TicketRoutingAgent:
         # logger.info(f"Tickets: {self.tickets}") # for debugging
 
         return self.tickets
-
-    def export_to_csv(self, filepath: str) -> bool:
-        if not self.tickets:
-            logger.warning("No ticket data to export")
-            return False
-
-        try:
-            import csv
-
-            with open(filepath, 'w', newline='') as csvfile:
-                fieldnames = [
-                    'subject', 'from', 'date', 'summary', 'department', 'timestamp'
-                ]
-                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-                writer.writeheader()
-
-                for ticket in self.tickets:
-                    row = {field: ticket.get(field, '') for field in fieldnames}
-                    if isinstance(row['date'], datetime):
-                        row['date'] = row['date'].strftime('%Y-%m-%d')
-                    writer.writerow(row)
-
-            logger.info(f"Exported ticket data to {filepath}")
-            return True
-
-        except Exception as e:
-            logger.error(f"Error exporting to CSV: {e}")
-            return False
