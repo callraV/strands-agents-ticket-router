@@ -34,7 +34,7 @@ def main():
     parser = argparse.ArgumentParser(description='Ticket Routing Agent')
     parser.add_argument('--region', type=str, default='us-east-1', help='AWS region for Bedrock')
     parser.add_argument('--profile', type=str, default='default', help='AWS profile name')
-    parser.add_argument('--export', type=str, help='Path to export CSV results')
+
     args = parser.parse_args()
 
     print_banner()
@@ -72,7 +72,6 @@ def main():
             ticket.get('timestamp', 'Unknown'),
             ticket.get('from', 'Unknown'),
             # ticket.get('forward_to', 'Unknown') # show forwarded department - optional
-
         ])
 
     print(tabulate(
