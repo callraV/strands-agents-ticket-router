@@ -69,7 +69,7 @@ class TicketRoutingAgent:
         agent = Agent(
             model=bedrock_model,
             tools=[
-                current_time, # default strands tool
+                # current_time, # default strands tool
                 calculator, # default strands tool
                 get_all_inbox, # custom tool
                 get_tickets, # custom tool
@@ -84,10 +84,7 @@ class TicketRoutingAgent:
             3. Summarize tickets and provide a report.
             4. Forward tickets to the relevant department (frontend, backend, sysops, or cross-functional), if prompted by the user.
 
-            When first called, the first thing you should say is a greeting.
-            Always starts by greeting the user according to the current time of day in Kuala Lumpur.
-            Do not announce the first tool you call, just use it.
-            Then, ask what the user needs help with.
+            Start by asking what the user needs help with if they haven't specified a task.
             """
         )
 
